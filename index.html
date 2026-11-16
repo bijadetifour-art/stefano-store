@@ -12,7 +12,7 @@ body{margin:0;background:#f3f4f6;color:#20242b;font-family:Arial,sans-serif}
 header{background:#17212b;color:white;padding:22px}
 .brand{font-size:28px;letter-spacing:4px;font-weight:bold}
 header p{color:#b8c2cc;font-size:12px}
-main{max-width:700px;margin:auto;padding:16px}
+main{max-width:760px;margin:auto;padding:16px}
 .card,.panel,.login{background:white;border-radius:13px;padding:17px;margin-bottom:14px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .number{font-size:23px;font-weight:bold;margin-top:8px}
@@ -25,17 +25,19 @@ nav button.active,.action{background:#17212b;color:white}
 .panel.active{display:block}
 input,select{width:100%;padding:13px;margin:7px 0;border:1px solid #ddd;border-radius:8px;font-size:15px}
 .action{border:0;border-radius:8px;padding:13px;width:100%;margin-top:8px}
-.item{padding:13px 0;border-bottom:1px solid #eee;font-size:14px;line-height:1.8}
+.item{padding:13px 0;border-bottom:1px solid #eee;font-size:14px;line-height:1.8;overflow:auto}
 .delete{float:left;color:#b91c1c;border:0;background:none}
 .edit{float:left;color:#174e8c;border:0;background:none;margin-left:12px}
 .logout{float:left;background:#555;color:white;border:0;padding:8px 12px;border-radius:7px}
-.notice{padding:12px;background:#f1f5f9;border-radius:8px;margin:10px 0;font-size:13px}
+.notice{padding:12px;background:#f1f5f9;border-radius:8px;margin:10px 0;font-size:13px;line-height:1.7}
 .hidden{display:none!important}
 footer{text-align:center;color:#999;padding:20px;font-size:12px}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
-.stat{background:#f1f5f9;padding:12px;border-radius:9px}
-.stat b{display:block;font-size:20px;margin-top:6px}
+.stat{background:#f1f5f9;padding:12px;border-radius:9px;font-size:13px}
+.stat b{display:block;font-size:19px;margin-top:6px}
 .section-title{font-size:16px;margin-top:20px}
+.good{color:#087443}
+.bad{color:#b91c1c}
 </style>
 </head>
 <body>
@@ -73,6 +75,9 @@ footer{text-align:center;color:#999;padding:20px;font-size:12px}
 <button onclick="show('selling',this)">المبيعات</button>
 <button onclick="show('history',this)">السجل</button>
 <button id="attendanceNav" class="hidden" onclick="show('attendance',this)">الحضور</button>
+<button id="dashboardNav" class="hidden" onclick="show('dashboard',this)">لوحة المدير</button>
+<button id="expensesNav" class="hidden" onclick="show('expenses',this)">المصاريف</button>
+<button onclick="show('wages',this)">الأجور</button>
 </nav>
 
 <section id="stock" class="panel active">
@@ -122,7 +127,7 @@ footer{text-align:center;color:#999;padding:20px;font-size:12px}
 </div>
 
 <div id="attendanceManagerInfo" class="notice hidden">
-يمكنك هنا متابعة حضور العمال ومراجعة أجورهم وتعديل السجلات.
+يمكنك متابعة حضور العمال ومراجعة أجورهم وتعديل السجلات.
 </div>
 
 <h3 class="section-title">ملخص الأجور والحضور</h3>
@@ -140,9 +145,66 @@ footer{text-align:center;color:#999;padding:20px;font-size:12px}
 </div>
 
 <div id="employeeWages"></div>
-
 <h3 class="section-title">سجلات الحضور</h3>
 <div id="attendanceList"></div>
+</section>
+
+<!-- MANAGER DASHBOARD -->
+<section id="dashboard" class="panel">
+<h2>لوحة المدير</h2>
+<p class="notice">اختر الفترة لمراجعة الأداء المالي للمحل.</p>
+<label>من تاريخ</label>
+<input type="date" id="dashFrom">
+<label>إلى تاريخ</label>
+<input type="date" id="dashTo">
+<button class="action" onclick="renderDashboard()">تحديث الحسابات</button>
+
+<div class="stats">
+<div class="stat">إجمالي المبيعات<b id="dashSales">0 دج</b></div>
+<div class="stat">تكلفة البضاعة المباعة<b id="dashCost">0 دج</b></div>
+<div class="stat">المصاريف<b id="dashExpenses">0 دج</b></div>
+<div class="stat">الأجور المستحقة<b id="dashWages">0 دج</b></div>
+</div>
+
+<div class="card">
+<small>صافي الربح التقديري للفترة</small>
+<div class="number" id="dashProfit">0 دج</div>
+<p id="profitNote" class="notice"></p>
+</div>
+<div class="notice">
+يعتمد الحساب على تكلفة شراء المنتجات المسجلة في تفاصيل المبيعات، والمصاريف المسجلة، وأجور الحضور. سجلات المبيعات القديمة التي لم يكن سعر الشراء محفوظاً فيها قد تكون تكلفتها تقديرية.
+</div>
+</section>
+
+<!-- EXPENSES -->
+<section id="expenses" class="panel">
+<h2>إدارة المصاريف</h2>
+<h3>إضافة مصروف</h3>
+<input id="expenseDescription" placeholder="وصف المصروف">
+<input id="expenseAmount" type="number" min="1" placeholder="المبلغ بالدينار">
+<label>تاريخ المصروف</label>
+<input id="expenseDate" type="date">
+<button class="action" onclick="addExpense()">حفظ المصروف</button>
+
+<h3 class="section-title">سجل المصاريف</h3>
+<div id="expensesList"></div>
+</section>
+
+<!-- WAGES -->
+<section id="wages" class="panel">
+<h2>الأجور والتسديد</h2>
+
+<div id="payrollManagerBox" class="hidden">
+<p class="notice">حدد فترة العمل ثم اضغط على إنشاء كشف الأجور. سيتم احتساب أجور العمال من سجلات الحضور.</p>
+<label>بداية الفترة</label>
+<input type="date" id="wageFrom">
+<label>نهاية الفترة</label>
+<input type="date" id="wageTo">
+<button class="action" onclick="generatePayroll()">إنشاء / تحديث كشف الأجور</button>
+</div>
+
+<h3 class="section-title">كشف الأجور</h3>
+<div id="wagesList"></div>
 </section>
 </section>
 </main>
@@ -161,6 +223,8 @@ let products = [];
 let sales = [];
 let attendanceRows = [];
 let employeeProfiles = [];
+let expenseRows = [];
+let wageRows = [];
 
 const periods = {
  morning:{label:'صباحي',hours:8,wage:1000},
@@ -175,6 +239,10 @@ function safe(value){
  }[c]));
 }
 
+function money(value){
+ return Number(value||0).toLocaleString('fr-DZ')+' دج';
+}
+
 function today(){
  const d=new Date();
  const offset=d.getTimezoneOffset();
@@ -183,6 +251,19 @@ function today(){
 
 function firstDayOfMonth(){
  return today().slice(0,8)+'01';
+}
+
+function setDefaultDates(){
+ const t=today();
+ const f=firstDayOfMonth();
+ ['attendanceDate','dateTo','dashTo','expenseDate','wageTo'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el)el.value=t;
+ });
+ ['dateFrom','dashFrom','wageFrom'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el)el.value=f;
+ });
 }
 
 async function login(){
@@ -229,6 +310,10 @@ async function startApp(user){
 
  if(profile.role!=='manager'){
   document.getElementById('addProductBox').classList.add('hidden');
+ }else{
+  document.getElementById('dashboardNav').classList.remove('hidden');
+  document.getElementById('expensesNav').classList.remove('hidden');
+  document.getElementById('payrollManagerBox').classList.remove('hidden');
  }
 
  const canSeeAttendance=
@@ -236,8 +321,6 @@ async function startApp(user){
 
  if(canSeeAttendance){
   document.getElementById('attendanceNav').classList.remove('hidden');
- }else{
-  document.getElementById('attendanceNav').classList.add('hidden');
  }
 
  if(profile.attendance_enabled===true){
@@ -248,10 +331,7 @@ async function startApp(user){
   document.getElementById('attendanceManagerInfo').classList.remove('hidden');
  }
 
- document.getElementById('attendanceDate').value=today();
- document.getElementById('dateFrom').value=firstDayOfMonth();
- document.getElementById('dateTo').value=today();
-
+ setDefaultDates();
  await loadData();
 }
 
@@ -266,8 +346,15 @@ async function loadData(){
 
  render();
 
+ await loadWages();
+
  if(profile.role==='manager'||profile.attendance_enabled===true){
   await loadAttendance();
+ }
+
+ if(profile.role==='manager'){
+  await loadExpenses();
+  renderDashboard();
  }
 }
 
@@ -277,9 +364,10 @@ function show(id,btn){
  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
  btn.classList.add('active');
 
- if(id==='attendance'){
-  loadAttendance();
- }
+ if(id==='attendance')loadAttendance();
+ if(id==='wages')loadWages();
+ if(id==='expenses'&&profile.role==='manager')loadExpenses();
+ if(id==='dashboard'&&profile.role==='manager')renderDashboard();
 }
 
 async function addProduct(){
@@ -362,13 +450,13 @@ function render(){
  document.getElementById('salesCount').textContent=sales.length;
 
  const total=sales.reduce((sum,s)=>sum+Number(s.total_amount||0),0);
- document.getElementById('revenue').textContent=total.toLocaleString('fr-DZ');
+ document.getElementById('revenue').textContent=money(total);
 
  document.getElementById('stockList').innerHTML=products.map(p=>`
  <div class="item">
  <b>${safe(p.name)}</b><br>
  المقاس: ${safe(p.size)} | اللون: ${safe(p.color)}<br>
- الكمية: ${p.quantity} | سعر البيع: ${p.selling_price} DA
+ الكمية: ${p.quantity} | سعر البيع: ${money(p.selling_price)}
  ${profile.role==='manager'?`<button class="delete" onclick="removeProduct(${p.id})">حذف</button>`:''}
  </div>`).join('')||'<p>لا توجد منتجات حالياً</p>';
 
@@ -381,8 +469,8 @@ function render(){
  document.getElementById('salesList').innerHTML=sales.map(s=>`
  <div class="item">
  عملية رقم ${s.id}<br>
- المبلغ: ${Number(s.total_amount).toLocaleString('fr-DZ')} DA<br>
- التاريخ: ${new Date(s.created_at).toLocaleString('ar-DZ')}
+ المبلغ: ${money(s.total_amount)}<br>
+ التاريخ: ${s.created_at?new Date(s.created_at).toLocaleString('ar-DZ'):'-'}
  </div>`).join('')||'<p>لا توجد مبيعات بعد</p>';
 }
 
@@ -426,8 +514,7 @@ async function submitAttendance(){
 
 async function loadAttendance(){
  const {data,error}=await db.from('attendance')
-  .select('*')
-  .order('work_date',{ascending:false});
+  .select('*').order('work_date',{ascending:false});
 
  if(error){
   alert('تعذر تحميل الحضور: '+error.message);
@@ -455,37 +542,27 @@ async function loadAttendance(){
 function renderAttendance(){
  const from=document.getElementById('dateFrom').value;
  const to=document.getElementById('dateTo').value;
-
- if(!from||!to){
-  return;
- }
+ if(!from||!to)return;
 
  if(from>to){
   alert('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
   return;
  }
 
- const rows=attendanceRows.filter(r=>
-  r.work_date>=from && r.work_date<=to
- );
-
+ const rows=attendanceRows.filter(r=>r.work_date>=from&&r.work_date<=to);
  const wages=rows.reduce((s,r)=>s+Number(r.daily_wage||0),0);
  const hours=rows.reduce((s,r)=>s+Number(r.hours||0),0);
  const work=rows.filter(r=>r.work_period!=='rest').length;
  const rest=rows.filter(r=>r.work_period==='rest').length;
 
- document.getElementById('totalWages').textContent=
-  wages.toLocaleString('fr-DZ')+' دج';
+ document.getElementById('totalWages').textContent=money(wages);
  document.getElementById('totalHours').textContent=hours;
  document.getElementById('workDays').textContent=work;
  document.getElementById('restDays').textContent=rest;
 
  const groups={};
-
  rows.forEach(r=>{
-  if(!groups[r.user_id]){
-   groups[r.user_id]={wage:0,hours:0,days:0,rest:0};
-  }
+  if(!groups[r.user_id])groups[r.user_id]={wage:0,hours:0,days:0,rest:0};
   groups[r.user_id].wage+=Number(r.daily_wage||0);
   groups[r.user_id].hours+=Number(r.hours||0);
   if(r.work_period==='rest')groups[r.user_id].rest++;
@@ -493,34 +570,30 @@ function renderAttendance(){
  });
 
  const names={};
- employeeProfiles.forEach(p=>{
-  names[p.user_id]=p.full_name||'عامل';
- });
+ employeeProfiles.forEach(p=>names[p.user_id]=p.full_name||'عامل');
 
  document.getElementById('employeeWages').innerHTML=
   profile.role==='manager'
   ? '<h3>مجموع كل عامل</h3>'+
-    Object.entries(groups).map(([id,g])=>`
+    (Object.entries(groups).map(([id,g])=>`
      <div class="item">
       <b>${safe(names[id]||'مستخدم')}</b><br>
-      الأجر: ${g.wage.toLocaleString('fr-DZ')} دج<br>
+      الأجر: ${money(g.wage)}<br>
       الساعات: ${g.hours} | أيام العمل: ${g.days} | الراحة: ${g.rest}
-     </div>`).join('')||'<p>لا توجد سجلات في هذه الفترة</p>'
+     </div>`).join('')||'<p>لا توجد سجلات في هذه الفترة</p>')
   : '';
 
  document.getElementById('attendanceList').innerHTML=rows.map(r=>{
   const person=names[r.user_id]||'عامل';
   const period=periods[r.work_period];
   const label=period?period.label:'غير محدد';
-  const wage=Number(r.daily_wage||0);
-  const rowDate=safe(r.work_date);
 
   return `
    <div class="item">
-    <b>${profile.role==='manager'?safe(person)+' - ':''}${rowDate}</b><br>
+    <b>${profile.role==='manager'?safe(person)+' - ':''}${safe(r.work_date)}</b><br>
     الفترة: ${safe(label)}<br>
     الساعات: ${Number(r.hours||0)}<br>
-    الأجر: ${wage.toLocaleString('fr-DZ')} دج<br>
+    الأجر: ${money(r.daily_wage)}<br>
     ${r.notes?`ملاحظات: ${safe(r.notes)}<br>`:''}
     ${profile.role==='manager'?`
      <button class="edit" onclick="editAttendance(${r.id})">تعديل</button>
@@ -532,16 +605,13 @@ function renderAttendance(){
 
 async function editAttendance(id){
  if(profile.role!=='manager')return;
-
  const record=attendanceRows.find(r=>r.id===id);
  if(!record)return;
 
- const current=record.work_period||'morning';
  const choice=prompt(
-  'اختر الفترة الجديدة بكتابة إحدى الكلمات التالية:\n morning = صباحي\n evening = مسائي\n full_day = يوم كامل\n rest = راحة',
-  current
+  'اكتب الفترة الجديدة:\nmorning = صباحي\nevening = مسائي\nfull_day = يوم كامل\nrest = راحة',
+  record.work_period||'morning'
  );
-
  if(choice===null)return;
 
  const period=choice.trim();
@@ -551,20 +621,13 @@ async function editAttendance(id){
  }
 
  const selected=periods[period];
+ const {error}=await db.from('attendance').update({
+  work_period:period,
+  hours:selected.hours,
+  daily_wage:selected.wage
+ }).eq('id',id);
 
- const {error}=await db.from('attendance')
-  .update({
-   work_period:period,
-   hours:selected.hours,
-   daily_wage:selected.wage
-  })
-  .eq('id',id);
-
- if(error){
-  alert('تعذر تعديل الحضور: '+error.message);
-  return;
- }
-
+ if(error){alert('تعذر تعديل الحضور: '+error.message);return;}
  await loadAttendance();
  alert('تم تعديل السجل بنجاح');
 }
@@ -574,14 +637,309 @@ async function deleteAttendance(id){
  if(!confirm('هل تريد حذف سجل الحضور هذا؟'))return;
 
  const {error}=await db.from('attendance').delete().eq('id',id);
+ if(error){alert('تعذر حذف السجل: '+error.message);return;}
+ await loadAttendance();
+ alert('تم حذف السجل');
+}
+
+/* EXPENSES */
+
+async function loadExpenses(){
+ if(profile.role!=='manager')return;
+
+ const {data,error}=await db.from('expenses')
+  .select('*').order('expense_date',{ascending:false});
 
  if(error){
-  alert('تعذر حذف السجل: '+error.message);
+  alert('تعذر تحميل المصاريف: '+error.message);
   return;
  }
 
- await loadAttendance();
- alert('تم حذف السجل');
+ expenseRows=data||[];
+ renderExpenses();
+}
+
+async function addExpense(){
+ if(profile.role!=='manager')return;
+
+ const description=document.getElementById('expenseDescription').value.trim();
+ const amount=Number(document.getElementById('expenseAmount').value);
+ const date=document.getElementById('expenseDate').value;
+
+ if(!description||amount<=0||!date){
+  alert('يرجى إدخال وصف المصروف والمبلغ والتاريخ بشكل صحيح');
+  return;
+ }
+
+ const {error}=await db.from('expenses').insert({
+  description,
+  amount,
+  expense_date:date
+ });
+
+ if(error){
+  alert('تعذر حفظ المصروف: '+error.message);
+  return;
+ }
+
+ document.getElementById('expenseDescription').value='';
+ document.getElementById('expenseAmount').value='';
+ await loadExpenses();
+ renderDashboard();
+ alert('تم حفظ المصروف');
+}
+
+function renderExpenses(){
+ document.getElementById('expensesList').innerHTML=
+ expenseRows.map(e=>`
+ <div class="item">
+  <b>${safe(e.description)}</b><br>
+  المبلغ: ${money(e.amount)}<br>
+  التاريخ: ${safe(e.expense_date)}
+  <button class="delete" onclick="deleteExpense(${e.id})">حذف</button>
+ </div>`).join('')||'<p>لا توجد مصاريف مسجلة</p>';
+}
+
+async function deleteExpense(id){
+ if(profile.role!=='manager')return;
+ if(!confirm('هل تريد حذف هذا المصروف؟'))return;
+
+ const {error}=await db.from('expenses').delete().eq('id',id);
+ if(error){
+  alert('تعذر حذف المصروف: '+error.message);
+  return;
+ }
+
+ await loadExpenses();
+ renderDashboard();
+}
+
+/* WAGES */
+
+async function loadWages(){
+ const {data,error}=await db.from('wages')
+  .select('*').order('period_start',{ascending:false});
+
+ if(error){
+  alert('تعذر تحميل الأجور: '+error.message);
+  return;
+ }
+
+ wageRows=data||[];
+
+ if(profile.role==='manager'){
+  const result=await db.from('profiles').select('user_id,full_name,role');
+  if(result.error){
+   alert('تعذر تحميل أسماء العمال: '+result.error.message);
+   return;
+  }
+  employeeProfiles=result.data||[];
+ }
+
+ renderWages();
+}
+
+function renderWages(){
+ const from=document.getElementById('wageFrom').value;
+ const to=document.getElementById('wageTo').value;
+
+ const rows=wageRows.filter(w=>{
+  if(profile.role!=='manager'&&w.user_id!==currentUser.id)return false;
+  if(from&&w.period_start<from)return false;
+  if(to&&w.period_end>to)return false;
+  return true;
+ });
+
+ const names={};
+ employeeProfiles.forEach(p=>names[p.user_id]=p.full_name||'عامل');
+
+ document.getElementById('wagesList').innerHTML=rows.map(w=>{
+  const amount=Number(w.amount||0);
+  const paid=Number(w.paid_amount||0);
+  const remaining=Math.max(0,amount-paid);
+  const isPaid=remaining===0;
+
+  return `
+   <div class="item">
+    <b>${profile.role==='manager'?safe(names[w.user_id]||'عامل'):'كشف أجوري'}</b><br>
+    الفترة: ${safe(w.period_start)} إلى ${safe(w.period_end)}<br>
+    الأجر المستحق: ${money(amount)}<br>
+    المدفوع: ${money(paid)}<br>
+    المتبقي: <b class="${isPaid?'good':'bad'}">${money(remaining)}</b><br>
+    الحالة: ${isPaid?'مدفوع بالكامل':paid>0?'مدفوع جزئياً':'لم يتم التسديد'}
+    ${profile.role==='manager'&&remaining>0?`
+     <button class="edit" onclick="payWage(${w.id})">تسجيل دفعة</button>
+    `:''}
+   </div>`;
+ }).join('')||'<p>لا توجد كشوف أجور لهذه الفترة.</p>';
+}
+
+async function generatePayroll(){
+ if(profile.role!=='manager')return;
+
+ const from=document.getElementById('wageFrom').value;
+ const to=document.getElementById('wageTo').value;
+
+ if(!from||!to||from>to){
+  alert('تحقق من تاريخ بداية ونهاية الفترة');
+  return;
+ }
+
+ const rows=attendanceRows.filter(r=>r.work_date>=from&&r.work_date<=to);
+ if(!rows.length){
+  alert('لا توجد سجلات حضور في هذه الفترة');
+  return;
+ }
+
+ const groups={};
+ rows.forEach(r=>{
+  groups[r.user_id]=(groups[r.user_id]||0)+Number(r.daily_wage||0);
+ });
+
+ for(const [userId,amount] of Object.entries(groups)){
+  const existing=await db.from('wages')
+   .select('*')
+   .eq('user_id',userId)
+   .eq('period_start',from)
+   .eq('period_end',to)
+   .limit(1);
+
+  if(existing.error){
+   alert('تعذر فحص كشف الأجر: '+existing.error.message);
+   return;
+  }
+
+  const old=existing.data&&existing.data.length?existing.data[0]:null;
+
+  if(old){
+   const paid=Number(old.paid_amount||0);
+   const result=await db.from('wages').update({
+    amount,
+    paid:paid>=amount
+   }).eq('id',old.id);
+
+   if(result.error){
+    alert('تعذر تحديث كشف الأجر: '+result.error.message);
+    return;
+   }
+  }else{
+   const result=await db.from('wages').insert({
+    user_id:userId,
+    amount,
+    period_start:from,
+    period_end:to,
+    paid:false,
+    paid_amount:0,
+    notes:'كشف أجور محسوب من سجلات الحضور'
+   });
+
+   if(result.error){
+    alert('تعذر إنشاء كشف الأجر: '+result.error.message);
+    return;
+   }
+  }
+ }
+
+ await loadWages();
+ alert('تم إنشاء أو تحديث كشف الأجور بنجاح');
+}
+
+async function payWage(id){
+ if(profile.role!=='manager')return;
+
+ const wage=wageRows.find(w=>w.id===id);
+ if(!wage)return;
+
+ const amount=Number(wage.amount||0);
+ const paid=Number(wage.paid_amount||0);
+ const remaining=amount-paid;
+
+ if(remaining<=0){
+  alert('هذا الأجر مدفوع بالكامل');
+  return;
+ }
+
+ const entered=prompt('المبلغ الذي تريد تسجيل دفعه. المتبقي: '+remaining+' دج');
+ if(entered===null)return;
+
+ const payment=Number(entered);
+ if(!Number.isFinite(payment)||payment<=0||payment>remaining){
+  alert('أدخل مبلغاً صحيحاً لا يتجاوز المبلغ المتبقي');
+  return;
+ }
+
+ const newPaid=paid+payment;
+ const {error}=await db.from('wages').update({
+  paid_amount:newPaid,
+  paid:newPaid>=amount
+ }).eq('id',id);
+
+ if(error){
+  alert('تعذر تسجيل الدفعة: '+error.message);
+  return;
+ }
+
+ await loadWages();
+ alert('تم تسجيل الدفعة بنجاح');
+}
+
+/* MANAGER DASHBOARD */
+
+async function renderDashboard(){
+ if(profile.role!=='manager')return;
+
+ const from=document.getElementById('dashFrom').value;
+ const to=document.getElementById('dashTo').value;
+ if(!from||!to)return;
+
+ if(from>to){
+  alert('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
+  return;
+ }
+
+ const selectedSales=sales.filter(s=>{
+  if(!s.created_at)return false;
+  const d=s.created_at.slice(0,10);
+  return d>=from&&d<=to;
+ });
+
+ const salesTotal=selectedSales.reduce((sum,s)=>sum+Number(s.total_amount||0),0);
+ const saleIds=selectedSales.map(s=>s.id);
+
+ let cost=0;
+ if(saleIds.length){
+  const details=await db.from('sale_items')
+   .select('sale_id,quantity,purchase_price')
+   .in('sale_id',saleIds);
+
+  if(details.error){
+   alert('تعذر حساب تكلفة البضاعة: '+details.error.message);
+   return;
+  }
+
+  cost=(details.data||[]).reduce((sum,item)=>
+   sum+Number(item.quantity||0)*Number(item.purchase_price||0),0);
+ }
+
+ const expenses=expenseRows.filter(e=>e.expense_date>=from&&e.expense_date<=to);
+ const expenseTotal=expenses.reduce((sum,e)=>sum+Number(e.amount||0),0);
+
+ const wages=attendanceRows.filter(r=>r.work_date>=from&&r.work_date<=to);
+ const wageTotal=wages.reduce((sum,r)=>sum+Number(r.daily_wage||0),0);
+
+ const profit=salesTotal-cost-expenseTotal-wageTotal;
+
+ document.getElementById('dashSales').textContent=money(salesTotal);
+ document.getElementById('dashCost').textContent=money(cost);
+ document.getElementById('dashExpenses').textContent=money(expenseTotal);
+ document.getElementById('dashWages').textContent=money(wageTotal);
+ document.getElementById('dashProfit').textContent=money(profit);
+
+ const note=profit>=0
+  ?'النتيجة موجبة حسب البيانات المسجلة.'
+  :'المصاريف والتكاليف المسجلة أكبر من المبيعات في هذه الفترة.';
+
+ document.getElementById('profitNote').textContent=note;
 }
 
 db.auth.getSession().then(({data})=>{
