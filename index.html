@@ -17,20 +17,25 @@ main{max-width:700px;margin:auto;padding:16px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .number{font-size:23px;font-weight:bold;margin-top:8px}
 small{color:#777}
-nav{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:16px 0}
+nav{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:16px 0}
 button{cursor:pointer}
-nav button{border:0;padding:12px 4px;border-radius:8px;background:#e1e5e9}
+nav button{border:0;padding:12px 4px;border-radius:8px;background:#e1e5e9;font-size:13px}
 nav button.active,.action{background:#17212b;color:white}
 .panel{display:none}
 .panel.active{display:block}
 input,select{width:100%;padding:13px;margin:7px 0;border:1px solid #ddd;border-radius:8px;font-size:15px}
 .action{border:0;border-radius:8px;padding:13px;width:100%;margin-top:8px}
-.item{padding:13px 0;border-bottom:1px solid #eee;font-size:14px}
+.item{padding:13px 0;border-bottom:1px solid #eee;font-size:14px;line-height:1.8}
 .delete{float:left;color:#b91c1c;border:0;background:none}
+.edit{float:left;color:#174e8c;border:0;background:none;margin-left:12px}
 .logout{float:left;background:#555;color:white;border:0;padding:8px 12px;border-radius:7px}
 .notice{padding:12px;background:#f1f5f9;border-radius:8px;margin:10px 0;font-size:13px}
 .hidden{display:none!important}
 footer{text-align:center;color:#999;padding:20px;font-size:12px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.stat{background:#f1f5f9;padding:12px;border-radius:9px}
+.stat b{display:block;font-size:20px;margin-top:6px}
+.section-title{font-size:16px;margin-top:20px}
 </style>
 </head>
 <body>
@@ -67,6 +72,7 @@ footer{text-align:center;color:#999;padding:20px;font-size:12px}
 <button class="active" onclick="show('stock',this)">المخزون</button>
 <button onclick="show('selling',this)">المبيعات</button>
 <button onclick="show('history',this)">السجل</button>
+<button id="attendanceNav" class="hidden" onclick="show('attendance',this)">الحضور</button>
 </nav>
 
 <section id="stock" class="panel active">
@@ -95,6 +101,49 @@ footer{text-align:center;color:#999;padding:20px;font-size:12px}
 <h2>سجل المبيعات</h2>
 <div id="salesList"></div>
 </section>
+
+<section id="attendance" class="panel">
+<h2>الحضور والأجور</h2>
+
+<div id="attendanceFormBox" class="hidden">
+<h3>تسجيل حضوري</h3>
+<label>تاريخ العمل</label>
+<input type="date" id="attendanceDate">
+<label>الفترة</label>
+<select id="workPeriod">
+<option value="morning">صباحي - 8 ساعات - 1000 دج</option>
+<option value="evening">مسائي - 6 ساعات - 800 دج</option>
+<option value="full_day">يوم كامل - 12 ساعة - 1800 دج</option>
+<option value="rest">راحة - 0 ساعة - 0 دج</option>
+</select>
+<input id="attendanceNotes" placeholder="ملاحظات (اختياري)">
+<button class="action" onclick="submitAttendance()">تأكيد تسجيل الحضور</button>
+<div class="notice">يمكن تسجيل اختيار واحد فقط في اليوم. لا يمكن للعامل تعديل أو حذف تسجيله بعد إرساله.</div>
+</div>
+
+<div id="attendanceManagerInfo" class="notice hidden">
+يمكنك هنا متابعة حضور العمال ومراجعة أجورهم وتعديل السجلات.
+</div>
+
+<h3 class="section-title">ملخص الأجور والحضور</h3>
+<label>من تاريخ</label>
+<input type="date" id="dateFrom">
+<label>إلى تاريخ</label>
+<input type="date" id="dateTo">
+<button class="action" onclick="renderAttendance()">عرض الفترة المحددة</button>
+
+<div class="stats">
+<div class="stat">مجموع الأجور<b id="totalWages">0 دج</b></div>
+<div class="stat">مجموع الساعات<b id="totalHours">0</b></div>
+<div class="stat">أيام العمل<b id="workDays">0</b></div>
+<div class="stat">أيام الراحة<b id="restDays">0</b></div>
+</div>
+
+<div id="employeeWages"></div>
+
+<h3 class="section-title">سجلات الحضور</h3>
+<div id="attendanceList"></div>
+</section>
 </section>
 </main>
 
@@ -110,11 +159,30 @@ let currentUser = null;
 let profile = null;
 let products = [];
 let sales = [];
+let attendanceRows = [];
+let employeeProfiles = [];
+
+const periods = {
+ morning:{label:'صباحي',hours:8,wage:1000},
+ evening:{label:'مسائي',hours:6,wage:800},
+ full_day:{label:'يوم كامل',hours:12,wage:1800},
+ rest:{label:'راحة',hours:0,wage:0}
+};
 
 function safe(value){
  return String(value ?? '').replace(/[&<>"']/g,c=>({
  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
  }[c]));
+}
+
+function today(){
+ const d=new Date();
+ const offset=d.getTimezoneOffset();
+ return new Date(d.getTime()-offset*60000).toISOString().slice(0,10);
+}
+
+function firstDayOfMonth(){
+ return today().slice(0,8)+'01';
 }
 
 async function login(){
@@ -138,9 +206,6 @@ async function logout(){
 
 async function startApp(user){
  currentUser=user;
- document.getElementById('loginBox').classList.add('hidden');
- document.getElementById('app').classList.remove('hidden');
- document.getElementById('logout').classList.remove('hidden');
 
  const {data,error}=await db.from('profiles')
   .select('*').eq('user_id',user.id).single();
@@ -151,6 +216,11 @@ async function startApp(user){
  }
 
  profile=data;
+
+ document.getElementById('loginBox').classList.add('hidden');
+ document.getElementById('app').classList.remove('hidden');
+ document.getElementById('logout').classList.remove('hidden');
+
  document.getElementById('welcome').textContent='مرحباً '+(profile.full_name||'بك');
  document.getElementById('roleText').textContent=
   profile.role==='manager'?'صلاحية المدير':'صلاحية العامل';
@@ -160,6 +230,27 @@ async function startApp(user){
  if(profile.role!=='manager'){
   document.getElementById('addProductBox').classList.add('hidden');
  }
+
+ const canSeeAttendance=
+  profile.role==='manager'||profile.attendance_enabled===true;
+
+ if(canSeeAttendance){
+  document.getElementById('attendanceNav').classList.remove('hidden');
+ }else{
+  document.getElementById('attendanceNav').classList.add('hidden');
+ }
+
+ if(profile.attendance_enabled===true){
+  document.getElementById('attendanceFormBox').classList.remove('hidden');
+ }
+
+ if(profile.role==='manager'){
+  document.getElementById('attendanceManagerInfo').classList.remove('hidden');
+ }
+
+ document.getElementById('attendanceDate').value=today();
+ document.getElementById('dateFrom').value=firstDayOfMonth();
+ document.getElementById('dateTo').value=today();
 
  await loadData();
 }
@@ -174,6 +265,10 @@ async function loadData(){
  sales=s.data||[];
 
  render();
+
+ if(profile.role==='manager'||profile.attendance_enabled===true){
+  await loadAttendance();
+ }
 }
 
 function show(id,btn){
@@ -181,6 +276,10 @@ function show(id,btn){
  document.getElementById(id).classList.add('active');
  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
  btn.classList.add('active');
+
+ if(id==='attendance'){
+  loadAttendance();
+ }
 }
 
 async function addProduct(){
@@ -285,6 +384,204 @@ function render(){
  المبلغ: ${Number(s.total_amount).toLocaleString('fr-DZ')} DA<br>
  التاريخ: ${new Date(s.created_at).toLocaleString('ar-DZ')}
  </div>`).join('')||'<p>لا توجد مبيعات بعد</p>';
+}
+
+/* ATTENDANCE */
+
+async function submitAttendance(){
+ if(!profile || profile.attendance_enabled!==true)return;
+
+ const date=document.getElementById('attendanceDate').value;
+ const period=document.getElementById('workPeriod').value;
+ const notes=document.getElementById('attendanceNotes').value.trim();
+ const selected=periods[period];
+
+ if(!date||!selected){
+  alert('يرجى اختيار التاريخ والفترة');
+  return;
+ }
+
+ const {error}=await db.from('attendance').insert({
+  user_id:currentUser.id,
+  work_date:date,
+  work_period:period,
+  hours:selected.hours,
+  daily_wage:selected.wage,
+  notes:notes||null
+ });
+
+ if(error){
+  if(error.code==='23505'){
+   alert('لقد سجلت حضورك لهذا اليوم من قبل.');
+  }else{
+   alert('تعذر تسجيل الحضور: '+error.message);
+  }
+  return;
+ }
+
+ document.getElementById('attendanceNotes').value='';
+ await loadAttendance();
+ alert('تم تسجيل حضورك بنجاح');
+}
+
+async function loadAttendance(){
+ const {data,error}=await db.from('attendance')
+  .select('*')
+  .order('work_date',{ascending:false});
+
+ if(error){
+  alert('تعذر تحميل الحضور: '+error.message);
+  return;
+ }
+
+ attendanceRows=data||[];
+
+ if(profile.role==='manager'){
+  const result=await db.from('profiles')
+   .select('user_id,full_name,role,attendance_enabled');
+
+  if(result.error){
+   alert('تعذر تحميل أسماء العمال: '+result.error.message);
+   return;
+  }
+  employeeProfiles=result.data||[];
+ }else{
+  employeeProfiles=[profile];
+ }
+
+ renderAttendance();
+}
+
+function renderAttendance(){
+ const from=document.getElementById('dateFrom').value;
+ const to=document.getElementById('dateTo').value;
+
+ if(!from||!to){
+  return;
+ }
+
+ if(from>to){
+  alert('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
+  return;
+ }
+
+ const rows=attendanceRows.filter(r=>
+  r.work_date>=from && r.work_date<=to
+ );
+
+ const wages=rows.reduce((s,r)=>s+Number(r.daily_wage||0),0);
+ const hours=rows.reduce((s,r)=>s+Number(r.hours||0),0);
+ const work=rows.filter(r=>r.work_period!=='rest').length;
+ const rest=rows.filter(r=>r.work_period==='rest').length;
+
+ document.getElementById('totalWages').textContent=
+  wages.toLocaleString('fr-DZ')+' دج';
+ document.getElementById('totalHours').textContent=hours;
+ document.getElementById('workDays').textContent=work;
+ document.getElementById('restDays').textContent=rest;
+
+ const groups={};
+
+ rows.forEach(r=>{
+  if(!groups[r.user_id]){
+   groups[r.user_id]={wage:0,hours:0,days:0,rest:0};
+  }
+  groups[r.user_id].wage+=Number(r.daily_wage||0);
+  groups[r.user_id].hours+=Number(r.hours||0);
+  if(r.work_period==='rest')groups[r.user_id].rest++;
+  else groups[r.user_id].days++;
+ });
+
+ const names={};
+ employeeProfiles.forEach(p=>{
+  names[p.user_id]=p.full_name||'عامل';
+ });
+
+ document.getElementById('employeeWages').innerHTML=
+  profile.role==='manager'
+  ? '<h3>مجموع كل عامل</h3>'+
+    Object.entries(groups).map(([id,g])=>`
+     <div class="item">
+      <b>${safe(names[id]||'مستخدم')}</b><br>
+      الأجر: ${g.wage.toLocaleString('fr-DZ')} دج<br>
+      الساعات: ${g.hours} | أيام العمل: ${g.days} | الراحة: ${g.rest}
+     </div>`).join('')||'<p>لا توجد سجلات في هذه الفترة</p>'
+  : '';
+
+ document.getElementById('attendanceList').innerHTML=rows.map(r=>{
+  const person=names[r.user_id]||'عامل';
+  const period=periods[r.work_period];
+  const label=period?period.label:'غير محدد';
+  const wage=Number(r.daily_wage||0);
+  const rowDate=safe(r.work_date);
+
+  return `
+   <div class="item">
+    <b>${profile.role==='manager'?safe(person)+' - ':''}${rowDate}</b><br>
+    الفترة: ${safe(label)}<br>
+    الساعات: ${Number(r.hours||0)}<br>
+    الأجر: ${wage.toLocaleString('fr-DZ')} دج<br>
+    ${r.notes?`ملاحظات: ${safe(r.notes)}<br>`:''}
+    ${profile.role==='manager'?`
+     <button class="edit" onclick="editAttendance(${r.id})">تعديل</button>
+     <button class="delete" onclick="deleteAttendance(${r.id})">حذف</button>
+    `:''}
+   </div>`;
+ }).join('')||'<p>لا توجد سجلات حضور في هذه الفترة</p>';
+}
+
+async function editAttendance(id){
+ if(profile.role!=='manager')return;
+
+ const record=attendanceRows.find(r=>r.id===id);
+ if(!record)return;
+
+ const current=record.work_period||'morning';
+ const choice=prompt(
+  'اختر الفترة الجديدة بكتابة إحدى الكلمات التالية:\n morning = صباحي\n evening = مسائي\n full_day = يوم كامل\n rest = راحة',
+  current
+ );
+
+ if(choice===null)return;
+
+ const period=choice.trim();
+ if(!periods[period]){
+  alert('اختيار غير صحيح');
+  return;
+ }
+
+ const selected=periods[period];
+
+ const {error}=await db.from('attendance')
+  .update({
+   work_period:period,
+   hours:selected.hours,
+   daily_wage:selected.wage
+  })
+  .eq('id',id);
+
+ if(error){
+  alert('تعذر تعديل الحضور: '+error.message);
+  return;
+ }
+
+ await loadAttendance();
+ alert('تم تعديل السجل بنجاح');
+}
+
+async function deleteAttendance(id){
+ if(profile.role!=='manager')return;
+ if(!confirm('هل تريد حذف سجل الحضور هذا؟'))return;
+
+ const {error}=await db.from('attendance').delete().eq('id',id);
+
+ if(error){
+  alert('تعذر حذف السجل: '+error.message);
+  return;
+ }
+
+ await loadAttendance();
+ alert('تم حذف السجل');
 }
 
 db.auth.getSession().then(({data})=>{
