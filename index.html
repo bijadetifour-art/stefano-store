@@ -38,6 +38,9 @@ footer{text-align:center;color:#999;padding:20px;font-size:12px}
 .section-title{font-size:16px;margin-top:20px}
 .good{color:#087443}
 .bad{color:#b91c1c}
+.search-result{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:13px;margin:10px 0}
+.search-result h3{margin-top:0}
+.search-total{background:#e9f1f5;padding:12px;border-radius:8px;margin:10px 0}
 </style>
 </head>
 <body>
@@ -82,6 +85,7 @@ footer{text-align:center;color:#999;padding:20px;font-size:12px}
 
 <section id="stock" class="panel active">
 <h2>المخزون</h2>
+
 <div id="addProductBox">
 <h3>إضافة منتج</h3>
 <input id="pname" placeholder="اسم المنتج">
@@ -92,6 +96,17 @@ footer{text-align:center;color:#999;padding:20px;font-size:12px}
 <input id="price" type="number" min="0" placeholder="سعر البيع DA">
 <button class="action" onclick="addProduct()">إضافة للمخزون</button>
 </div>
+
+<h3 class="section-title">البحث عن منتج في المخزن</h3>
+<input
+ id="stockSearch"
+ type="search"
+ placeholder="ابحث باسم المنتج أو القياس أو اللون..."
+ oninput="searchStock()"
+>
+<div id="stockSearchResults"></div>
+
+<h3 class="section-title">جميع المنتجات</h3>
 <div id="stockList"></div>
 </section>
 
@@ -149,7 +164,6 @@ footer{text-align:center;color:#999;padding:20px;font-size:12px}
 <div id="attendanceList"></div>
 </section>
 
-<!-- MANAGER DASHBOARD -->
 <section id="dashboard" class="panel">
 <h2>لوحة المدير</h2>
 <p class="notice">اختر الفترة لمراجعة الأداء المالي للمحل.</p>
@@ -176,21 +190,19 @@ footer{text-align:center;color:#999;padding:20px;font-size:12px}
 </div>
 </section>
 
-<!-- EXPENSES -->
 <section id="expenses" class="panel">
 <h2>إدارة المصاريف</h2>
 <h3>إضافة مصروف</h3>
 <input id="expenseDescription" placeholder="وصف المصروف">
 <input id="expenseAmount" type="number" min="1" placeholder="المبلغ بالدينار">
 <label>تاريخ المصروف</label>
-<input id="expenseDate" type="date">
+<input type="date" id="expenseDate">
 <button class="action" onclick="addExpense()">حفظ المصروف</button>
 
 <h3 class="section-title">سجل المصاريف</h3>
 <div id="expensesList"></div>
 </section>
 
-<!-- WAGES -->
 <section id="wages" class="panel">
 <h2>الأجور والتسديد</h2>
 
@@ -410,6 +422,83 @@ async function removeProduct(id){
  await loadData();
 }
 
+/* البحث عن المنتجات في المخزن */
+
+function searchStock(){
+ const input=document.getElementById('stockSearch');
+ const results=document.getElementById('stockSearchResults');
+ const query=input.value.trim().toLowerCase();
+
+ if(!query){
+  results.innerHTML='';
+  return;
+ }
+
+ const matches=products.filter(p=>
+  String(p.name||'').toLowerCase().includes(query) ||
+  String(p.size||'').toLowerCase().includes(query) ||
+  String(p.color||'').toLowerCase().includes(query)
+ );
+
+ if(!matches.length){
+  results.innerHTML='<div class="notice">لم يتم العثور على هذا المنتج في المخزن.</div>';
+  return;
+ }
+
+ const groups={};
+
+ matches.forEach(p=>{
+  const name=String(p.name||'').trim();
+  const key=name.toLowerCase();
+
+  if(!groups[key]){
+   groups[key]={
+    name:name,
+    total:0,
+    variants:{}
+   };
+  }
+
+  const size=String(p.size||'غير محدد').trim();
+  const color=String(p.color||'غير محدد').trim();
+  const variantKey=size.toLowerCase()+'|'+color.toLowerCase();
+
+  groups[key].total+=Number(p.quantity||0);
+
+  if(!groups[key].variants[variantKey]){
+   groups[key].variants[variantKey]={
+    size,
+    color,
+    quantity:0
+   };
+  }
+
+  groups[key].variants[variantKey].quantity+=Number(p.quantity||0);
+ });
+
+ results.innerHTML=Object.values(groups).map(group=>`
+  <div class="search-result">
+   <h3>${safe(group.name)}</h3>
+
+   <div class="search-total">
+    إجمالي الكمية المتبقية:
+    <b>${group.total}</b> قطعة
+   </div>
+
+   <b>تفاصيل القياسات والألوان:</b>
+
+   ${Object.values(group.variants).map(v=>`
+    <div class="item">
+     القياس: <b>${safe(v.size)}</b><br>
+     اللون: <b>${safe(v.color)}</b><br>
+     الكمية المتبقية:
+     <b class="${v.quantity>0?'good':'bad'}">${v.quantity}</b>
+    </div>
+   `).join('')}
+  </div>
+ `).join('');
+}
+
 async function sell(){
  const id=Number(document.getElementById('productSelect').value);
  const amount=Number(document.getElementById('sellQty').value);
@@ -472,6 +561,11 @@ function render(){
  المبلغ: ${money(s.total_amount)}<br>
  التاريخ: ${s.created_at?new Date(s.created_at).toLocaleString('ar-DZ'):'-'}
  </div>`).join('')||'<p>لا توجد مبيعات بعد</p>';
+
+ const searchInput=document.getElementById('stockSearch');
+ if(searchInput && searchInput.value.trim()){
+  searchStock();
+ }
 }
 
 /* ATTENDANCE */
