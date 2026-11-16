@@ -5,181 +5,291 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>STEFANO | Management</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f3f4f6;color:#20242b;font-family:Arial,sans-serif}
-header{background:#17212b;color:white;padding:25px 20px}
-.brand{font-size:27px;letter-spacing:4px;font-weight:bold}
+header{background:#17212b;color:white;padding:22px}
+.brand{font-size:28px;letter-spacing:4px;font-weight:bold}
 header p{color:#b8c2cc;font-size:12px}
-main{max-width:650px;margin:auto;padding:17px}
-h2{font-size:19px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.card{background:white;border-radius:13px;padding:16px}
-.card small{color:#777}
-.number{font-size:24px;font-weight:bold;margin-top:10px}
-nav{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:20px 0}
-nav button{border:0;padding:12px 3px;border-radius:9px;background:#e1e5e9;font-size:12px}
+main{max-width:700px;margin:auto;padding:16px}
+.card,.panel,.login{background:white;border-radius:13px;padding:17px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.number{font-size:23px;font-weight:bold;margin-top:8px}
+small{color:#777}
+nav{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:16px 0}
+button{cursor:pointer}
+nav button{border:0;padding:12px 4px;border-radius:8px;background:#e1e5e9}
 nav button.active,.action{background:#17212b;color:white}
-.panel{display:none;background:white;padding:17px;border-radius:13px}
+.panel{display:none}
 .panel.active{display:block}
 input,select{width:100%;padding:13px;margin:7px 0;border:1px solid #ddd;border-radius:8px;font-size:15px}
-.action{border:0;border-radius:8px;padding:13px;width:100%;margin-top:8px;font-size:15px}
+.action{border:0;border-radius:8px;padding:13px;width:100%;margin-top:8px}
 .item{padding:13px 0;border-bottom:1px solid #eee;font-size:14px}
 .delete{float:left;color:#b91c1c;border:0;background:none}
-footer{text-align:center;color:#999;padding:25px;font-size:12px}
+.logout{float:left;background:#555;color:white;border:0;padding:8px 12px;border-radius:7px}
+.notice{padding:12px;background:#f1f5f9;border-radius:8px;margin:10px 0;font-size:13px}
+.hidden{display:none!important}
+footer{text-align:center;color:#999;padding:20px;font-size:12px}
 </style>
 </head>
 <body>
 <header>
+<button class="logout hidden" id="logout" onclick="logout()">خروج</button>
 <div class="brand">STEFANO</div>
 <p>STORE MANAGEMENT SYSTEM</p>
 </header>
-<main>
-<h2>لوحة المدير</h2>
-<div class="grid">
-<div class="card"><small>عدد المنتجات</small><div class="number" id="products">0</div></div>
-<div class="card"><small>عمليات البيع</small><div class="number" id="sales">0</div></div>
-<div class="card"><small>المبيعات بالدينار</small><div class="number" id="revenue">0</div></div>
-<div class="card"><small>العمال</small><div class="number">3</div></div>
-</div>
-<nav>
-<button class="active" onclick="show('home',this)">الرئيسية</button>
-<button onclick="show('stock',this)">المخزون</button>
-<button onclick="show('selling',this)">المبيعات</button>
-<button onclick="show('staff',this)">العمال</button>
-</nav>
 
-<section id="home" class="panel active">
-<h2>مرحباً بك في STEFANO</h2>
-<div class="item">إدارة المنتجات والمقاسات والألوان</div>
-<div class="item">تسجيل المبيعات اليومية</div>
-<div class="item">متابعة العمال والأجور</div>
-<div class="item">متابعة المخزون</div>
+<main>
+<section class="login" id="loginBox">
+<h2>تسجيل الدخول</h2>
+<p>أدخل بيانات حسابك للولوج إلى النظام</p>
+<input id="email" type="email" placeholder="البريد الإلكتروني">
+<input id="password" type="password" placeholder="كلمة المرور">
+<button class="action" onclick="login()">دخول</button>
+<p id="loginMessage" class="notice">استعمل الحساب الذي أنشأته في Supabase.</p>
 </section>
 
-<section id="stock" class="panel">
-<h2>إضافة منتج</h2>
+<section id="app" class="hidden">
+<div class="card">
+<div id="welcome">مرحباً</div>
+<small id="roleText"></small>
+</div>
+
+<div class="grid">
+<div class="card"><small>عدد المنتجات</small><div class="number" id="productsCount">0</div></div>
+<div class="card"><small>عمليات البيع</small><div class="number" id="salesCount">0</div></div>
+<div class="card"><small>المبيعات بالدينار</small><div class="number" id="revenue">0</div></div>
+<div class="card"><small>المستخدم</small><div class="number" id="userRole">-</div></div>
+</div>
+
+<nav>
+<button class="active" onclick="show('stock',this)">المخزون</button>
+<button onclick="show('selling',this)">المبيعات</button>
+<button onclick="show('history',this)">السجل</button>
+</nav>
+
+<section id="stock" class="panel active">
+<h2>المخزون</h2>
+<div id="addProductBox">
+<h3>إضافة منتج</h3>
 <input id="pname" placeholder="اسم المنتج">
 <input id="size" placeholder="المقاس">
 <input id="color" placeholder="اللون">
-<input id="qty" type="number" placeholder="الكمية">
-<input id="price" type="number" placeholder="سعر البيع DA">
+<input id="qty" type="number" min="1" placeholder="الكمية">
+<input id="buyPrice" type="number" min="0" placeholder="سعر الشراء DA">
+<input id="price" type="number" min="0" placeholder="سعر البيع DA">
 <button class="action" onclick="addProduct()">إضافة للمخزون</button>
-<div id="stocklist"></div>
+</div>
+<div id="stockList"></div>
 </section>
 
 <section id="selling" class="panel">
 <h2>تسجيل عملية بيع</h2>
 <select id="productSelect"></select>
-<input id="sellqty" type="number" placeholder="الكمية المباعة">
+<input id="sellQty" type="number" min="1" placeholder="الكمية المباعة">
 <button class="action" onclick="sell()">تأكيد البيع</button>
-<div id="saleslist"></div>
 </section>
 
-<section id="staff" class="panel">
-<h2>العمال</h2>
-<div class="item">رحيم</div>
-<div class="item">بجاد</div>
-<div class="item">الحاج</div>
-<p>سيتم تطوير الحضور والأجور في المرحلة القادمة.</p>
+<section id="history" class="panel">
+<h2>سجل المبيعات</h2>
+<div id="salesList"></div>
+</section>
 </section>
 </main>
+
 <footer>STEFANO © 2026</footer>
 
 <script>
-let stock=JSON.parse(localStorage.getItem('st_stock')||'[]');
-let sales=JSON.parse(localStorage.getItem('st_sales')||'[]');
+const SUPABASE_URL = 'https://xplbpbyhxcgzhmxyahtg.supabase.co';
+const SUPABASE_KEY = 'sb_publishable__-v9mCPJ_jY9cQW5XZP5tg_bFwsrp4y';
 
-function save(){
-localStorage.setItem('st_stock',JSON.stringify(stock));
-localStorage.setItem('st_sales',JSON.stringify(sales));
-render();
+const db = window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let currentUser = null;
+let profile = null;
+let products = [];
+let sales = [];
+
+function safe(value){
+ return String(value ?? '').replace(/[&<>"']/g,c=>({
+ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+ }[c]));
+}
+
+async function login(){
+ const email=document.getElementById('email').value.trim();
+ const password=document.getElementById('password').value;
+ const msg=document.getElementById('loginMessage');
+ msg.textContent='جارٍ تسجيل الدخول...';
+
+ const {data,error}=await db.auth.signInWithPassword({email,password});
+ if(error){
+  msg.textContent='تعذر الدخول: '+error.message;
+  return;
+ }
+ await startApp(data.user);
+}
+
+async function logout(){
+ await db.auth.signOut();
+ location.reload();
+}
+
+async function startApp(user){
+ currentUser=user;
+ document.getElementById('loginBox').classList.add('hidden');
+ document.getElementById('app').classList.remove('hidden');
+ document.getElementById('logout').classList.remove('hidden');
+
+ const {data,error}=await db.from('profiles')
+  .select('*').eq('user_id',user.id).single();
+
+ if(error || !data){
+  alert('لم يتم العثور على ملف المستخدم. راجع إعدادات Supabase.');
+  return;
+ }
+
+ profile=data;
+ document.getElementById('welcome').textContent='مرحباً '+(profile.full_name||'بك');
+ document.getElementById('roleText').textContent=
+  profile.role==='manager'?'صلاحية المدير':'صلاحية العامل';
+ document.getElementById('userRole').textContent=
+  profile.role==='manager'?'مدير':'عامل';
+
+ if(profile.role!=='manager'){
+  document.getElementById('addProductBox').classList.add('hidden');
+ }
+
+ await loadData();
+}
+
+async function loadData(){
+ const p=await db.from('products').select('*').order('created_at',{ascending:false});
+ if(p.error){alert('خطأ في تحميل المخزون: '+p.error.message);return;}
+ products=p.data||[];
+
+ const s=await db.from('sales').select('*').order('created_at',{ascending:false});
+ if(s.error){alert('خطأ في تحميل المبيعات: '+s.error.message);return;}
+ sales=s.data||[];
+
+ render();
 }
 
 function show(id,btn){
-document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
-document.getElementById(id).classList.add('active');
-document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
-btn.classList.add('active');
+ document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+ btn.classList.add('active');
 }
 
-function addProduct(){
-let name=document.getElementById('pname').value.trim();
-let qty=Number(document.getElementById('qty').value);
-let price=Number(document.getElementById('price').value);
+async function addProduct(){
+ if(profile.role!=='manager')return;
 
-if(!name||qty<=0||price<=0){
-alert('يرجى إدخال بيانات صحيحة');
-return;
+ const name=document.getElementById('pname').value.trim();
+ const qty=Number(document.getElementById('qty').value);
+ const price=Number(document.getElementById('price').value);
+ const purchase=Number(document.getElementById('buyPrice').value||0);
+
+ if(!name||qty<=0||price<=0||purchase<0){
+  alert('يرجى إدخال بيانات صحيحة');
+  return;
+ }
+
+ const {error}=await db.from('products').insert({
+  name,
+  size:document.getElementById('size').value.trim(),
+  color:document.getElementById('color').value.trim(),
+  quantity:qty,
+  purchase_price:purchase,
+  selling_price:price
+ });
+
+ if(error){alert('لم تتم الإضافة: '+error.message);return;}
+
+ ['pname','size','color','qty','buyPrice','price'].forEach(id=>{
+  document.getElementById(id).value='';
+ });
+ await loadData();
+ alert('تمت إضافة المنتج بنجاح');
 }
 
-stock.push({
-id:Date.now(),
-name,
-size:document.getElementById('size').value,
-color:document.getElementById('color').value,
-qty,price
-});
+async function removeProduct(id){
+ if(profile.role!=='manager')return;
+ if(!confirm('هل تريد حذف هذا المنتج؟'))return;
 
-['pname','size','color','qty','price'].forEach(id=>{
-document.getElementById(id).value='';
-});
-save();
+ const {error}=await db.from('products').delete().eq('id',id);
+ if(error){alert('تعذر الحذف: '+error.message);return;}
+ await loadData();
 }
 
-function sell(){
-let id=Number(document.getElementById('productSelect').value);
-let amount=Number(document.getElementById('sellqty').value);
-let p=stock.find(x=>x.id===id);
+async function sell(){
+ const id=Number(document.getElementById('productSelect').value);
+ const amount=Number(document.getElementById('sellQty').value);
+ const product=products.find(p=>p.id===id);
 
-if(!p||amount<=0||amount>p.qty){
-alert('تحقق من المنتج والكمية');
-return;
-}
+ if(!product||amount<=0||amount>product.quantity){
+  alert('تحقق من المنتج والكمية');
+  return;
+ }
 
-p.qty-=amount;
-sales.push({
-name:p.name,
-amount,
-total:amount*p.price,
-date:new Date().toLocaleDateString('ar-DZ')
-});
+ const sale=await db.from('sales')
+  .insert({user_id:currentUser.id,total_amount:0})
+  .select('id').single();
 
-document.getElementById('sellqty').value='';
-save();
+ if(sale.error){
+  alert('تعذر تسجيل البيع: '+sale.error.message);
+  return;
+ }
+
+ const detail=await db.from('sale_items').insert({
+  sale_id:sale.data.id,
+  product_id:product.id,
+  quantity:amount
+ });
+
+ if(detail.error){
+  alert('تعذرت إضافة تفاصيل البيع: '+detail.error.message);
+  return;
+ }
+
+ document.getElementById('sellQty').value='';
+ await loadData();
+ alert('تم تسجيل البيع وتحديث المخزون');
 }
 
 function render(){
-document.getElementById('products').textContent=stock.length;
-document.getElementById('sales').textContent=sales.length;
-document.getElementById('revenue').textContent=
-sales.reduce((a,s)=>a+s.total,0).toLocaleString('fr-DZ');
+ document.getElementById('productsCount').textContent=products.length;
+ document.getElementById('salesCount').textContent=sales.length;
 
-document.getElementById('stocklist').innerHTML=stock.map(p=>
-`<div class="item">${p.name} | ${p.size} | ${p.color}<br>
-الكمية: ${p.qty} | ${p.price} DA
-<button class="delete" onclick="removeProduct(${p.id})">حذف</button></div>`
-).join('');
+ const total=sales.reduce((sum,s)=>sum+Number(s.total_amount||0),0);
+ document.getElementById('revenue').textContent=total.toLocaleString('fr-DZ');
 
-document.getElementById('productSelect').innerHTML=
-'<option value="">اختر المنتج</option>'+
-stock.filter(p=>p.qty>0).map(p=>
-`<option value="${p.id}">${p.name} - ${p.size} - ${p.color} (${p.qty})</option>`
-).join('');
+ document.getElementById('stockList').innerHTML=products.map(p=>`
+ <div class="item">
+ <b>${safe(p.name)}</b><br>
+ المقاس: ${safe(p.size)} | اللون: ${safe(p.color)}<br>
+ الكمية: ${p.quantity} | سعر البيع: ${p.selling_price} DA
+ ${profile.role==='manager'?`<button class="delete" onclick="removeProduct(${p.id})">حذف</button>`:''}
+ </div>`).join('')||'<p>لا توجد منتجات حالياً</p>';
 
-document.getElementById('saleslist').innerHTML=sales.map(s=>
-`<div class="item">${s.name} | ${s.amount} قطعة | ${s.total} DA | ${s.date}</div>`
-).join('');
+ document.getElementById('productSelect').innerHTML=
+ '<option value="">اختر المنتج</option>'+
+ products.filter(p=>p.quantity>0).map(p=>
+ `<option value="${p.id}">${safe(p.name)} - ${safe(p.size)} - ${safe(p.color)} (${p.quantity})</option>`
+ ).join('');
+
+ document.getElementById('salesList').innerHTML=sales.map(s=>`
+ <div class="item">
+ عملية رقم ${s.id}<br>
+ المبلغ: ${Number(s.total_amount).toLocaleString('fr-DZ')} DA<br>
+ التاريخ: ${new Date(s.created_at).toLocaleString('ar-DZ')}
+ </div>`).join('')||'<p>لا توجد مبيعات بعد</p>';
 }
 
-function removeProduct(id){
-if(!confirm('هل تريد حذف هذا المنتج؟'))return;
-stock=stock.filter(p=>p.id!==id);
-save();
-}
-
-render();
+db.auth.getSession().then(({data})=>{
+ if(data.session)startApp(data.session.user);
+});
 </script>
 </body>
 </html>
-
