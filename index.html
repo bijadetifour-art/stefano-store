@@ -1,1 +1,185 @@
 
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEFANO | Management</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f4f6;color:#20242b;font-family:Arial,sans-serif}
+header{background:#17212b;color:white;padding:25px 20px}
+.brand{font-size:27px;letter-spacing:4px;font-weight:bold}
+header p{color:#b8c2cc;font-size:12px}
+main{max-width:650px;margin:auto;padding:17px}
+h2{font-size:19px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card{background:white;border-radius:13px;padding:16px}
+.card small{color:#777}
+.number{font-size:24px;font-weight:bold;margin-top:10px}
+nav{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:20px 0}
+nav button{border:0;padding:12px 3px;border-radius:9px;background:#e1e5e9;font-size:12px}
+nav button.active,.action{background:#17212b;color:white}
+.panel{display:none;background:white;padding:17px;border-radius:13px}
+.panel.active{display:block}
+input,select{width:100%;padding:13px;margin:7px 0;border:1px solid #ddd;border-radius:8px;font-size:15px}
+.action{border:0;border-radius:8px;padding:13px;width:100%;margin-top:8px;font-size:15px}
+.item{padding:13px 0;border-bottom:1px solid #eee;font-size:14px}
+.delete{float:left;color:#b91c1c;border:0;background:none}
+footer{text-align:center;color:#999;padding:25px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+<div class="brand">STEFANO</div>
+<p>STORE MANAGEMENT SYSTEM</p>
+</header>
+<main>
+<h2>لوحة المدير</h2>
+<div class="grid">
+<div class="card"><small>عدد المنتجات</small><div class="number" id="products">0</div></div>
+<div class="card"><small>عمليات البيع</small><div class="number" id="sales">0</div></div>
+<div class="card"><small>المبيعات بالدينار</small><div class="number" id="revenue">0</div></div>
+<div class="card"><small>العمال</small><div class="number">3</div></div>
+</div>
+<nav>
+<button class="active" onclick="show('home',this)">الرئيسية</button>
+<button onclick="show('stock',this)">المخزون</button>
+<button onclick="show('selling',this)">المبيعات</button>
+<button onclick="show('staff',this)">العمال</button>
+</nav>
+
+<section id="home" class="panel active">
+<h2>مرحباً بك في STEFANO</h2>
+<div class="item">إدارة المنتجات والمقاسات والألوان</div>
+<div class="item">تسجيل المبيعات اليومية</div>
+<div class="item">متابعة العمال والأجور</div>
+<div class="item">متابعة المخزون</div>
+</section>
+
+<section id="stock" class="panel">
+<h2>إضافة منتج</h2>
+<input id="pname" placeholder="اسم المنتج">
+<input id="size" placeholder="المقاس">
+<input id="color" placeholder="اللون">
+<input id="qty" type="number" placeholder="الكمية">
+<input id="price" type="number" placeholder="سعر البيع DA">
+<button class="action" onclick="addProduct()">إضافة للمخزون</button>
+<div id="stocklist"></div>
+</section>
+
+<section id="selling" class="panel">
+<h2>تسجيل عملية بيع</h2>
+<select id="productSelect"></select>
+<input id="sellqty" type="number" placeholder="الكمية المباعة">
+<button class="action" onclick="sell()">تأكيد البيع</button>
+<div id="saleslist"></div>
+</section>
+
+<section id="staff" class="panel">
+<h2>العمال</h2>
+<div class="item">رحيم</div>
+<div class="item">بجاد</div>
+<div class="item">الحاج</div>
+<p>سيتم تطوير الحضور والأجور في المرحلة القادمة.</p>
+</section>
+</main>
+<footer>STEFANO © 2026</footer>
+
+<script>
+let stock=JSON.parse(localStorage.getItem('st_stock')||'[]');
+let sales=JSON.parse(localStorage.getItem('st_sales')||'[]');
+
+function save(){
+localStorage.setItem('st_stock',JSON.stringify(stock));
+localStorage.setItem('st_sales',JSON.stringify(sales));
+render();
+}
+
+function show(id,btn){
+document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+document.getElementById(id).classList.add('active');
+document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+btn.classList.add('active');
+}
+
+function addProduct(){
+let name=document.getElementById('pname').value.trim();
+let qty=Number(document.getElementById('qty').value);
+let price=Number(document.getElementById('price').value);
+
+if(!name||qty<=0||price<=0){
+alert('يرجى إدخال بيانات صحيحة');
+return;
+}
+
+stock.push({
+id:Date.now(),
+name,
+size:document.getElementById('size').value,
+color:document.getElementById('color').value,
+qty,price
+});
+
+['pname','size','color','qty','price'].forEach(id=>{
+document.getElementById(id).value='';
+});
+save();
+}
+
+function sell(){
+let id=Number(document.getElementById('productSelect').value);
+let amount=Number(document.getElementById('sellqty').value);
+let p=stock.find(x=>x.id===id);
+
+if(!p||amount<=0||amount>p.qty){
+alert('تحقق من المنتج والكمية');
+return;
+}
+
+p.qty-=amount;
+sales.push({
+name:p.name,
+amount,
+total:amount*p.price,
+date:new Date().toLocaleDateString('ar-DZ')
+});
+
+document.getElementById('sellqty').value='';
+save();
+}
+
+function render(){
+document.getElementById('products').textContent=stock.length;
+document.getElementById('sales').textContent=sales.length;
+document.getElementById('revenue').textContent=
+sales.reduce((a,s)=>a+s.total,0).toLocaleString('fr-DZ');
+
+document.getElementById('stocklist').innerHTML=stock.map(p=>
+`<div class="item">${p.name} | ${p.size} | ${p.color}<br>
+الكمية: ${p.qty} | ${p.price} DA
+<button class="delete" onclick="removeProduct(${p.id})">حذف</button></div>`
+).join('');
+
+document.getElementById('productSelect').innerHTML=
+'<option value="">اختر المنتج</option>'+
+stock.filter(p=>p.qty>0).map(p=>
+`<option value="${p.id}">${p.name} - ${p.size} - ${p.color} (${p.qty})</option>`
+).join('');
+
+document.getElementById('saleslist').innerHTML=sales.map(s=>
+`<div class="item">${s.name} | ${s.amount} قطعة | ${s.total} DA | ${s.date}</div>`
+).join('');
+}
+
+function removeProduct(id){
+if(!confirm('هل تريد حذف هذا المنتج؟'))return;
+stock=stock.filter(p=>p.id!==id);
+save();
+}
+
+render();
+</script>
+</body>
+</html>
+
