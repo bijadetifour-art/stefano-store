@@ -5,7 +5,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#171613">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="STEFANO">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+
 <title>STEFANO | Luxury Management</title>
+
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/svg+xml" href="./icon.svg">
+<link rel="apple-touch-icon" href="./icon.svg">
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
@@ -708,8 +718,6 @@ async function removeProduct(id){
  await loadData();
 }
 
-/* البحث عن المنتجات */
-
 function searchStock(){
  const input=document.getElementById('stockSearch');
  const results=document.getElementById('stockSearchResults');
@@ -842,8 +850,6 @@ function render(){
   searchStock();
  }
 }
-
-/* الحضور */
 
 async function submitAttendance(){
  if(!profile || profile.attendance_enabled!==true)return;
@@ -1011,8 +1017,6 @@ async function deleteAttendance(id){
  alert('تم حذف السجل');
 }
 
-/* المصاريف */
-
 async function loadExpenses(){
  if(profile.role!=='manager')return;
 
@@ -1082,8 +1086,6 @@ async function deleteExpense(id){
  await loadExpenses();
  renderDashboard();
 }
-
-/* الأجور */
 
 async function loadWages(){
  const {data,error}=await db.from('wages')
@@ -1252,8 +1254,6 @@ async function payWage(id){
  alert('تم تسجيل الدفعة بنجاح');
 }
 
-/* لوحة المدير */
-
 async function renderDashboard(){
  if(profile.role!=='manager')return;
 
@@ -1311,9 +1311,21 @@ async function renderDashboard(){
  document.getElementById('profitNote').textContent=note;
 }
 
+/* تشغيل التطبيق */
+
 db.auth.getSession().then(({data})=>{
  if(data.session)startApp(data.session.user);
 });
+
+/* تسجيل التطبيق كـ PWA */
+
+if('serviceWorker' in navigator){
+ window.addEventListener('load',()=>{
+  navigator.serviceWorker.register('./sw.js')
+   .then(()=>console.log('STEFANO PWA ready'))
+   .catch(error=>console.error('PWA registration failed:',error));
+ });
+}
 </script>
 
 </body>
